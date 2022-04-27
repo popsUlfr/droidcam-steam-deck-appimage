@@ -68,7 +68,7 @@ then
     }
     trap cleanup EXIT
     mkdir "$TMP_DIR/upper" "$TMP_DIR/work"
-    mount -t overlay -o lowerdir="/usr/lib/modules/$(uname -r)":"$LOWER_DIR",upperdir="$TMP_DIR/upper",workdir="$TMP_DIR/work",volatile overlay "/usr/lib/modules/$(uname -r)"
+    mount -t overlay -o lowerdir="$LOWER_DIR":"/usr/lib/modules/$(uname -r)",upperdir="$TMP_DIR/upper",workdir="$TMP_DIR/work" overlay "/usr/lib/modules/$(uname -r)"
     depmod
 fi
 modprobe videodev
@@ -104,12 +104,15 @@ then
     else
         LOWER_DIR="$APPDIR/usr/lib/modules/$(uname -r)"
     fi
+    TMP_DIR="$(mktemp -d -p /tmp appimage-droidcam.XXXXXX)"
+    cp -a "$LOWER_DIR"/. "$TMP_DIR"/
     LOG_FILE="$(mktemp -p /tmp appimage-droidcam.XXXXXX.log)"
-    if ! cat "$APPDIR/usr/bin/droidcam-module-load" | sudo -A sh -s "$LOWER_DIR" 2>&1 | tee -a "$LOG_FILE" >&2
+    if ! cat "$APPDIR/usr/bin/droidcam-module-load" | sudo -A sh -s "$TMP_DIR" 2>&1 | tee -a "$LOG_FILE" >&2
     then
         echo "ERROR! Failed to load the needed modules." 2>&1 | tee -a "$LOG_FILE" >&2
         zenity --error --width=300 --title="ERROR! Failed to load the needed modules." --text="$(cat "$LOG_FILE")" || true
     fi
+    rm -rf "$TMP_DIR"
     rm -f "$LOG_FILE"
 fi
 if basename "$ARGV0" | grep -q '^droidcam-cli'
