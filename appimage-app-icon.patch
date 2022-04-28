@@ -1,0 +1,39 @@
+diff --git a/src/droidcam.c b/src/droidcam.c
+index cad1ee4..832c39e 100644
+--- a/src/droidcam.c
++++ b/src/droidcam.c
+@@ -10,6 +10,9 @@
+ #include <libappindicator/app-indicator.h>
+ #include <X11/Xlib.h>
+ #include <stdint.h>
++#include <stdlib.h>
++#include <limits.h>
++#include <stdio.h>
+ 
+ #include "common.h"
+ #include "settings.h"
+@@ -44,6 +47,14 @@ extern const char *thread_cmd_val_str;
+ extern char snd_device[32];
+ extern char v4l2_device[32];
+ const char *APP_ICON_FILE = "/opt/droidcam-icon.png";
++static char appimage_app_icon_file_buf[PATH_MAX];
++static void appimage_app_icon_file(void) {
++	const char *appdir_env = getenv("APPDIR");
++	if (!appdir_env || !*appdir_env)
++		return;
++	snprintf(appimage_app_icon_file_buf, PATH_MAX, "%s/%s", appdir_env, "usr/share/pixmaps/droidcam.png");
++	APP_ICON_FILE = appimage_app_icon_file_buf;
++}
+ 
+ void * AudioThreadProc(void * args);
+ void * VideoThreadProc(void * args);
+@@ -454,6 +465,9 @@ int main(int argc, char *argv[])
+ 	GClosure *closure;
+ 	GtkAccelGroup *gtk_accel;
+ 
++	// Correct AppImage app icon file
++	appimage_app_icon_file();
++
+ 	// init threads
+ 	XInitThreads();
+ 	gtk_init(&argc, &argv);

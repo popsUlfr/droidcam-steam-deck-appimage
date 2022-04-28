@@ -68,6 +68,7 @@ ldconfig
 git clone "$DROIDCAM_URL"
 cd droidcam
 git checkout v"$DROIDCAM_VERSION"
+patch -Np1 -i "$OUT_DIR/appimage-app-icon.patch"
 make -j$(nproc) JPEG_DIR="" JPEG_INCLUDE="" JPEG_LIB="" JPEG="$(pkg-config --libs --cflags libturbojpeg)"
 
 install -Dm755 droidcam "$BUILD_DIR/AppDir/usr/bin/droidcam"
