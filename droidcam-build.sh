@@ -8,7 +8,7 @@ DEST="/usr/local"
 DROIDCAM_VERSION=1.8.2
 DROIDCAM_URL='https://github.com/dev47apps/droidcam.git'
 LIBJPEG_TURBO_VERSION=2.1.3
-KERNEL_VERSION="$(tar -tf "$OUT_DIR/v4l2loopback-dc.tar" | grep /v4l2loopback-dc\.ko | tail -n 1 | cut -d/ -f4)"
+KERNEL_VERSION="$(tar -tf "$OUT_DIR/v4l2loopback-dc.tar" | grep /v4l2loopback-dc\.ko | sed 's#^[./]*##' | sort -u | tail -n 1 | cut -d/ -f4)"
 
 # building in temporary directory to keep system clean
 # use RAM disk if possible (as in: not building on CI system like Travis, and RAM disk is available)
