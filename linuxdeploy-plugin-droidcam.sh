@@ -96,24 +96,49 @@ then
             fi
         done
     fi
-    if [ ! -d "$APPDIR/usr/lib/modules/$(uname -r)" ] && ! modinfo v4l2loopback_dc >/dev/null 2>&1
+    if command -v zenity >/dev/null
     then
-        echo "WARNING! No kernel module found that matches current kernel. The appimage may need to be updated."
-        zenity --warning --width=300 --text="WARNING! No kernel module found that matches current kernel. The appimage may need to be updated." || true
-        LOWER_DIR="$APPDIR/usr/lib/modules/$(find "$APPDIR/usr/lib/modules" -mindepth 1 -maxdepth 1 -type d | tail -n 1)"
+        has_zenity=1
+    else
+        has_zenity=0
+    fi
+    if [ ! -d "$APPDIR/usr/lib/modules/$(uname -r)" ]
+    then
+        if ! modinfo v4l2loopback_dc >/dev/null 2>&1
+        then
+            echo "WARNING! No kernel module found that matches current kernel. The appimage may need to be updated."
+            if [ "$has_zenity" -eq 1 ]
+            then
+                zenity --warning --width=300 --text="WARNING! No kernel module found that matches current kernel. The appimage may need to be updated." || true
+            fi
+        fi
+        LOWER_DIR="$(find "$APPDIR/usr/lib/modules" -mindepth 1 -maxdepth 1 -type d | tail -n 1)"
     else
         LOWER_DIR="$APPDIR/usr/lib/modules/$(uname -r)"
     fi
     TMP_DIR="$(mktemp -d -p /tmp appimage-droidcam.XXXXXX)"
-    cp -a "$LOWER_DIR"/. "$TMP_DIR"/
-    LOG_FILE="$(mktemp -p /tmp appimage-droidcam.XXXXXX.log)"
-    if ! cat "$APPDIR/usr/bin/droidcam-module-load" | sudo -A sh -s "$TMP_DIR" 2>&1 | tee -a "$LOG_FILE" >&2
+    mkdir "$TMP_DIR/lower"
+    cp -a "$LOWER_DIR"/. "$TMP_DIR/lower/"
+    LOG_FILE="$TMP_DIR/appimage-droidcam.log"
+    touch "$LOG_FILE"
+    progress_pid=
+    if [ "$has_zenity" -eq 1 ]
+    then
+        mkfifo -m 600 "$TMP_DIR/progress"
+        cat "$TMP_DIR/progress" | zenity --progress --pulsate --no-cancel --auto-close --title="Installing kernel module" --width=300 --text="Installing kernel module" &
+        progress_pid="$!"
+    fi
+    if ! cat "$APPDIR/usr/bin/droidcam-module-load" | sudo -A sh -s "$TMP_DIR/lower" 2>&1 | tee -a "$LOG_FILE" >&2
     then
         echo "ERROR! Failed to load the needed modules." 2>&1 | tee -a "$LOG_FILE" >&2
         zenity --error --width=300 --title="ERROR! Failed to load the needed modules." --text="$(cat "$LOG_FILE")" || true
     fi
+    if [ "$has_zenity" -eq 1 ]
+    then
+        echo 100 > "$TMP_DIR/progress"
+        wait "$progress_pid" || true
+    fi
     rm -rf "$TMP_DIR"
-    rm -f "$LOG_FILE"
 fi
 if basename "$ARGV0" | grep -q '^droidcam-cli'
 then
