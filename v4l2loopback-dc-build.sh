@@ -9,7 +9,8 @@ echo 'Server = https://steamdeck-packages.steamos.cloud/archlinux-mirror/$repo/o
 sed -i 's#^\(\[core\]\)#[jupiter]\nServer = https://steamdeck-packages.steamos.cloud/archlinux-mirror/$repo/os/$arch\nSigLevel = Never\n\n[holo]\nServer = https://steamdeck-packages.steamos.cloud/archlinux-mirror/$repo/os/$arch\nSigLevel = Never\n\n\1#' /etc/pacman.conf
 # Reinstall all packages
 pacman -Syy
-pacman -Qqn | pacman -S --noconfirm --overwrite='*' -
+pacman -Rdd --noconfirm libverto
+pacman -Qqn | pacman -S --noconfirm --ignore libverto --overwrite='*' -
 pacman -S --noconfirm --needed base-devel git linux-neptune linux-neptune-headers sudo
 useradd -m builduser
 echo 'builduser ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builduser

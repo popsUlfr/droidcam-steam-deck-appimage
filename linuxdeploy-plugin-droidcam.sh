@@ -75,7 +75,7 @@ then
     trap cleanup EXIT
     mkdir "$TMP_DIR/upper" "$TMP_DIR/work"
     mount -t overlay -o lowerdir="$LOWER_DIR":"/usr/lib/modules/$(uname -r)",upperdir="$TMP_DIR/upper",workdir="$TMP_DIR/work" overlay "/usr/lib/modules/$(uname -r)"
-    depmod
+    depmod -A
 fi
 if lsmod | grep -q '^v4l2loopback_dc\b'
 then
