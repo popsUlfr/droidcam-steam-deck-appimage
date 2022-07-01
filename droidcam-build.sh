@@ -104,6 +104,9 @@ curl -sSLo linuxdeploy-plugin-gtk.sh https://raw.githubusercontent.com/linuxdepl
 chmod +x linuxdeploy-plugin-gtk.sh
 cp "$OUT_DIR/linuxdeploy-plugin-droidcam.sh" .
 
+# fix girepository-1.0 path
+mkdir -p /usr/lib/x86_64-linux-gnu/girepository-1.0
+
 OUTPUT="DroidCam-${DROIDCAM_VERSION}-${KERNEL_VERSION}-x86_64_SteamDeck.AppImage" ./linuxdeploy-x86_64.AppImage --appdir AppDir \
     --executable AppDir/usr/bin/droidcam \
     --desktop-file AppDir/usr/share/applications/droidcam.desktop \
