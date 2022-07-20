@@ -6,7 +6,7 @@ set -eux
 OUT_DIR="/tmp/out"
 # Add SteamOS server and repos
 echo 'Server = https://steamdeck-packages.steamos.cloud/archlinux-mirror/$repo/os/$arch' > /etc/pacman.d/mirrorlist
-sed -i 's#^\(\[core\]\)#[jupiter]\nServer = https://steamdeck-packages.steamos.cloud/archlinux-mirror/$repo/os/$arch\nSigLevel = Never\n\n[holo]\nServer = https://steamdeck-packages.steamos.cloud/archlinux-mirror/$repo/os/$arch\nSigLevel = Never\n\n\1#' /etc/pacman.conf
+sed -i -e 's/\s*#\?\s*SigLevel\s*=\s*.*$/SigLevel = Never/g' -e 's#^\(\[core\]\)#[jupiter]\nInclude = /etc/pacman.d/mirrorlist\n\n[holo]\nInclude = /etc/pacman.d/mirrorlist\n\n\1#' /etc/pacman.conf
 # Reinstall all packages
 pacman -Syy
 pacman -Rdd --noconfirm libverto
