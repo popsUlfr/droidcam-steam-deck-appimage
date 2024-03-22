@@ -61,35 +61,47 @@ export MAKEFLAGS="-j$(nproc)"
 export pkgdir="/usr"
 
 # libjpeg-turbo
-# https://github.com/archlinux/svntogit-packages/blob/packages/libjpeg-turbo/trunk/PKGBUILD
+# https://gitlab.archlinux.org/archlinux/packaging/packages/libjpeg-turbo/-/blob/main/PKGBUILD?ref_type=heads
 echo "Building libjpeg-turbo..."
 (
-    _name=libjpeg-turbo
-    pkgname="$_name"
-    pkgver=2.1.4
-    #makedepends=(cmake ninja nasm 'java-environment>11')
-    #optdepends=('java-runtime>11: for TurboJPEG Java wrapper')
-    #provides=(libjpeg libjpeg.so libturbojpeg.so)
+    pkgname=libjpeg-turbo
+    pkgver=3.0.2
+    url="https://libjpeg-turbo.org/"
+    _url="https://github.com/libjpeg-turbo/libjpeg-turbo/"
 
-    curl -sSLo "$_name-$pkgver.tar.gz" "https://sourceforge.net/projects/$_name/files/$pkgver/$_name-$pkgver.tar.gz"
-    echo "511f065767c022da06b6c36299686fa44f83441646f7e33b766c6cfab03f91b0e6bfa456962184071dadaed4057ba9a29cba685383f3eb86a4370a1a53731a70 $_name-$pkgver.tar.gz" > "$_name-$pkgver.tar.gz.sha512"
-    sha512sum -c "$_name-$pkgver.tar.gz.sha512"
+    # depends=(glibc)
+    # makedepends=(
+    #   cmake
+    #   ninja
+    #   nasm
+    #   'java-environment>11'
+    # )
+    # optdepends=('java-runtime>11: for TurboJPEG Java wrapper')
+    # provides=(
+    #   libjpeg
+    #   libjpeg.so
+    #   libturbojpeg.so
+    # )
 
-    tar -xf "$_name-$pkgver.tar.gz"
+    curl -sSLo "$pkgname-$pkgver.tar.gz" "$_url/releases/download/$pkgver/$pkgname-$pkgver.tar.gz"
+    echo "f5eadda0712feb810a8c3bb2621fda24a4c30574998ce30f423b3ffa25225c7a87cb14b696232bc0270485f422a2853a5c32eafb65bc5eeab1b41d8aeb32ad29 $pkgname-$pkgver.tar.gz" > "$pkgname-$pkgver.tar.gz.sha512"
+    sha512sum -c "$pkgname-$pkgver.tar.gz.sha512"
 
-    cd "$_name-$pkgver"
-    cmake -G Ninja \
-        -DCMAKE_INSTALL_PREFIX=/usr \
-        -DCMAKE_INSTALL_LIBDIR=/usr/lib64 \
-        -DCMAKE_BUILD_TYPE=None \
-        -DENABLE_STATIC=OFF \
-        -DWITH_JAVA=OFF \
-        -DWITH_JPEG8=ON \
+    tar -xf "$pkgname-$pkgver.tar.gz"
+
+    cd "$pkgname-$pkgver"
+    cmake -D CMAKE_INSTALL_PREFIX=/usr \
+        -D CMAKE_INSTALL_LIBDIR=/usr/lib64 \
+        -D CMAKE_BUILD_TYPE=None \
+        -D ENABLE_STATIC=OFF \
+        -D WITH_JAVA=OFF \
+        -D WITH_JPEG8=ON \
+        -G Ninja \
         -W no-dev \
         .
     cmake --build .
-
     ninja install
+    install -vDm 644 jpegint.h /usr/include
 )
 echo "Building libjpeg-turbo done."
 
@@ -104,15 +116,16 @@ echo "Building droidcam..."
 (
     pkgbase=droidcam
     pkgname='droidcam'
-    pkgver=1.8.2
-    url="https://github.com/aramg/${pkgbase}"
+    pkgver=2.1.2
+    url="https://github.com/dev47apps/${pkgbase}"
     #makedepends=('libappindicator-gtk3' 'gtk3' 'ffmpeg' 'libusbmuxd')
+    #depends=('alsa-lib' 'libjpeg-turbo' 'ffmpeg' 'v4l2loopback-dc-dkms' 'libusbmuxd')
 
-    curl -sSLo "${pkgbase}-${pkgver}.zip" "${url}/archive/v${pkgver}.zip"
-    echo "a5a5601efc60ae5e60e189f9ec8c73dab5579e6fdeebdcb9b809b6befb416ecc ${pkgbase}-${pkgver}.zip" > "${pkgbase}-${pkgver}.zip.sha256"
-    sha256sum -c "${pkgbase}-${pkgver}.zip.sha256"
+    curl -sSLo "v${pkgver}.zip" "${url}/archive/refs/tags/v${pkgver}.zip"
+    echo "c669ccac95a91b5a673eef6dfceb785658f337e69c2fe0f7b1d34c82ad00e04b v${pkgver}.zip" > "v${pkgver}.zip.sha256"
+    sha256sum -c "v${pkgver}.zip.sha256"
 
-    unzip "${pkgbase}-${pkgver}.zip"
+    unzip "v${pkgver}.zip"
 
     cd "${pkgbase}-${pkgver}"
     patch -Np1 -i "$OUT_DIR/appimage-app-icon.patch"
@@ -143,7 +156,7 @@ cp "$OUT_DIR/linuxdeploy-plugin-droidcam.sh" .
 # fix girepository-1.0 path
 mkdir -p /usr/lib/x86_64-linux-gnu/girepository-1.0
 
-DROIDCAM_VERSION=1.8.2
+DROIDCAM_VERSION=2.1.2
 KERNEL_VERSION="$(tar -tf "$OUT_DIR/v4l2loopback-dc.tar" | grep /v4l2loopback-dc\.ko | sed 's#^[./]*##' | sort -u | tail -n 1 | cut -d/ -f4)"
 
 OUTPUT="DroidCam-${DROIDCAM_VERSION}-${KERNEL_VERSION}-x86_64_SteamDeck.AppImage" ./linuxdeploy-x86_64.AppImage --appdir AppDir \
