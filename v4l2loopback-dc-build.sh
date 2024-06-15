@@ -5,7 +5,12 @@ set -eux
 # archlinux image
 OUT_DIR="/tmp/out"
 TMP_PKG_DIR="/tmp/v4l2loopback-dc"
-repo_suffixes=('' '-3.0' '-3.1' '-3.2' '-3.3' '-3.3.1' '-3.3.2' '-3.3.3' '-3.5' '-rel' '-beta' '-main' '-staging')
+repo_suffixes=('-staging' '-main' '-beta' '-rel' '-3.6' '-3.5' '-3.3.3' '-3.3.2' '-3.3.1' '-3.3' '-3.2' '-3.1' '-3.0' '')
+_rs=("${repo_suffixes[@]:0:${#repo_suffixes[@]}-1}")
+for s in "${_rs[@]}"
+do
+    repo_suffixes=("${repo_suffixes[@]:0:${#_rs[@]}+1}" "$s" "${repo_suffixes[@]:${#_rs[@]}+1}")
+done
 i=0
 for s in "${repo_suffixes[@]}"
 do
@@ -15,14 +20,14 @@ do
     fi
     i=$((i+1))
 done
+if [[ "$i" -ge "${#repo_suffixes[@]}" ]]
+then
+    exit 1
+fi
 ret_code="$(curl -sSLIo /dev/null -w '%{http_code}' "https://steamdeck-packages.steamos.cloud/archlinux-mirror/jupiter${repo_suffixes[${i}]}/os/x86_64/jupiter${repo_suffixes[${i}]}.db")"
 if [[ "$ret_code" != '200' ]]
 then
     exit 0
-fi
-if [[ "$i" -ge "${#repo_suffixes[@]}" ]]
-then
-    exit 1
 fi
 
 # Setup builduser and module directory
@@ -30,7 +35,10 @@ useradd -m builduser
 mkdir -p /etc/sudoers.d
 echo 'builduser ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builduser
 mkdir -p "$TMP_PKG_DIR"
-tar -xf "$OUT_DIR/v4l2loopback-dc.tar" -C "$TMP_PKG_DIR"
+tar -xf "$OUT_DIR/v4l2loopback-dc.tar.zst" -C "$TMP_PKG_DIR"
+find "$TMP_PKG_DIR" -type f -name '*.xz' -exec unxz -f '{}' +
+find "$TMP_PKG_DIR" -type f -name '*.gz' -exec gunzip -f '{}' +
+find "$TMP_PKG_DIR" -type f -name '*.zst' -exec unzstd -f --rm '{}' +
 
 # Add SteamOS server and repos
 echo 'Server = https://steamdeck-packages.steamos.cloud/archlinux-mirror/$repo/os/$arch' > /etc/pacman.d/mirrorlist
@@ -58,7 +66,8 @@ done
 pacman -Syy --noconfirm
 pacman -Rndd --noconfirm libverto || true
 pacman -S --overwrite='*' --noconfirm - < <(pacman -Qqn)
-pacman -S --noconfirm --needed base-devel git sudo wget
+pacman -S --noconfirm --needed base-devel git mkinitcpio sudo wget
+rm -rf /usr/share/libalpm/hooks/*mkinitcpio*.hook || true
 su -l -c '[ ! -d droidcam ] && git clone https://aur.archlinux.org/droidcam.git ; cd droidcam ; sed -i -e "s/^\(pkgname\s*=\).*$/\1v4l2loopback-dc-dkms/" -e "s/^\(makedepends\s*=\)/#\1/" -e "s/^\(build()\)/_\1/" PKGBUILD ; makepkg -cCfsi --noconfirm' builduser
 for pkg in "${kernel_pkg_list[@]}"
 do
@@ -92,5 +101,8 @@ do
     fi
 done
 
+find "$TMP_PKG_DIR" -type f -name '*.xz' -exec unxz -f '{}' +
+find "$TMP_PKG_DIR" -type f -name '*.gz' -exec gunzip -f '{}' +
+find "$TMP_PKG_DIR" -type f -name '*.zst' -exec unzstd -f --rm '{}' +
 # finally package the modules tar
-tar -cf "$OUT_DIR/v4l2loopback-dc.tar" -C "$TMP_PKG_DIR" .
+tar -cf - --numeric-owner -C "$TMP_PKG_DIR" . | zstd -19 > "$OUT_DIR/v4l2loopback-dc.tar.zst"

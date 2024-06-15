@@ -36,6 +36,7 @@ yum -y install pkg-config \
     nasm \
     ninja-build \
     curl \
+    zstd \
     fuse \
     fuse-libs \
     ffmpeg \
@@ -65,7 +66,7 @@ export pkgdir="/usr"
 echo "Building libjpeg-turbo..."
 (
     pkgname=libjpeg-turbo
-    pkgver=3.0.2
+    pkgver=3.0.3
     url="https://libjpeg-turbo.org/"
     _url="https://github.com/libjpeg-turbo/libjpeg-turbo/"
 
@@ -75,6 +76,7 @@ echo "Building libjpeg-turbo..."
     #   ninja
     #   nasm
     #   'java-environment>11'
+    #   strip-nondeterminism
     # )
     # optdepends=('java-runtime>11: for TurboJPEG Java wrapper')
     # provides=(
@@ -84,7 +86,7 @@ echo "Building libjpeg-turbo..."
     # )
 
     curl -sSLo "$pkgname-$pkgver.tar.gz" "$_url/releases/download/$pkgver/$pkgname-$pkgver.tar.gz"
-    echo "f5eadda0712feb810a8c3bb2621fda24a4c30574998ce30f423b3ffa25225c7a87cb14b696232bc0270485f422a2853a5c32eafb65bc5eeab1b41d8aeb32ad29 $pkgname-$pkgver.tar.gz" > "$pkgname-$pkgver.tar.gz.sha512"
+    echo "7c3a6660e7a54527eaa40929f5cc3d519842ffb7e961c32630ae7232b71ecaa19e89dbf5600c61038f0c5db289b607c2316fe9b6b03d482d770bcac29288d129 $pkgname-$pkgver.tar.gz" > "$pkgname-$pkgver.tar.gz.sha512"
     sha512sum -c "$pkgname-$pkgver.tar.gz.sha512"
 
     tar -xf "$pkgname-$pkgver.tar.gz"
@@ -116,18 +118,19 @@ echo "Building droidcam..."
 (
     pkgbase=droidcam
     pkgname='droidcam'
-    pkgver=2.1.2
-    url="https://github.com/dev47apps/${pkgbase}"
-    #makedepends=('libappindicator-gtk3' 'gtk3' 'ffmpeg' 'libusbmuxd')
-    #depends=('alsa-lib' 'libjpeg-turbo' 'ffmpeg' 'v4l2loopback-dc-dkms' 'libusbmuxd')
+    _name=droidcam-linux-client
+    pkgver=2.1.3
+    url="https://github.com/dev47apps/droidcam-linux-client"
+    #makedepends=('alsa-lib' 'ffmpeg' 'gtk3' 'libappindicator-gtk3' 'libjpeg-turbo' 'libusbmuxd' 'speex')
+    #depends=('alsa-lib' 'ffmpeg' 'glib2' 'glibc' 'gtk3' 'libappindicator-gtk3' 'libjpeg-turbo' 'libusbmuxd' 'libx11' 'pango' 'speex' 'V4L2LOOPBACK-MODULE')
 
-    curl -sSLo "v${pkgver}.zip" "${url}/archive/refs/tags/v${pkgver}.zip"
-    echo "c669ccac95a91b5a673eef6dfceb785658f337e69c2fe0f7b1d34c82ad00e04b v${pkgver}.zip" > "v${pkgver}.zip.sha256"
-    sha256sum -c "v${pkgver}.zip.sha256"
+    curl -sSLo "${pkgbase}-${pkgver}.tar.gz" "${url}/archive/refs/tags/v${pkgver}.tar.gz"
+    echo "86d18029364d8ecd8b1a8fcae4cc37122f43683326fe49922b2ce2c8cf01e49d ${pkgbase}-${pkgver}.tar.gz" > "${pkgbase}-${pkgver}.tar.gz.sha256"
+    sha256sum -c "${pkgbase}-${pkgver}.tar.gz.sha256"
 
-    unzip "v${pkgver}.zip"
+    tar -xf "${pkgbase}-${pkgver}.tar.gz"
 
-    cd "${pkgbase}-${pkgver}"
+    cd "${_name}-${pkgver}"
     patch -Np1 -i "$OUT_DIR/appimage-app-icon.patch"
     make JPEG_DIR="" JPEG_INCLUDE="" JPEG_LIB="" JPEG="$(pkg-config --libs --cflags libturbojpeg)" CFLAGS="$CFLAGS -std=gnu99"
 
@@ -142,7 +145,7 @@ echo "Building droidcam..."
 echo "Building droidcam done."
 
 mkdir -p AppDir
-tar -xf "$OUT_DIR/v4l2loopback-dc.tar" -C AppDir
+zstd -d -k -c "$OUT_DIR/v4l2loopback-dc.tar.zst" | tar -xf - -C AppDir
 
 # create appimages
 curl -sSLo linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
@@ -156,8 +159,8 @@ cp "$OUT_DIR/linuxdeploy-plugin-droidcam.sh" .
 # fix girepository-1.0 path
 mkdir -p /usr/lib/x86_64-linux-gnu/girepository-1.0
 
-DROIDCAM_VERSION=2.1.2
-KERNEL_VERSION="$(tar -tf "$OUT_DIR/v4l2loopback-dc.tar" | grep /v4l2loopback-dc\.ko | sed 's#^[./]*##' | sort -u | tail -n 1 | cut -d/ -f4)"
+DROIDCAM_VERSION=2.1.3
+KERNEL_VERSION="$(zstd -d -k -c "$OUT_DIR/v4l2loopback-dc.tar.zst" | tar -tf - | grep /v4l2loopback-dc\.ko | sed 's#^[./]*##' | sort -u | tail -n 1 | cut -d/ -f4)"
 
 OUTPUT="DroidCam-${DROIDCAM_VERSION}-${KERNEL_VERSION}-x86_64_SteamDeck.AppImage" ./linuxdeploy-x86_64.AppImage --appdir AppDir \
     --executable AppDir/usr/bin/droidcam \
